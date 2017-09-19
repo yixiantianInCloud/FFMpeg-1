@@ -1,0 +1,85 @@
+https://zhidao.baidu.com/question/241474284002597524.html
+首先：
+　　是要编译libjnivideo.so和libjniaudio.so 这两个so因为不同的版本或者修改过的framework是不一样的，所以需要在android源码中 编译出自己的so。我的android 2.1源码是从官网下载回来的，没有经过修改。
+　　下载链接中的native目录下的源码到framework/base目录下具体看他的目录结构。https：//github：com/havlenapetr/android_frameworks_base
+　　
+　　编译主要有3个错误
+　　1.
+　　library 'libjnigraphics.so' not in prelink map
+　　当前目录下的Android.mk 加上
+　　LOCAL_PRELINK_MODULE := false
+　　
+　　2.
+　　frameworks/base/native/video/jni/surface.cpp:17:36: error: surfaceflinger/Surface.h: No such file or directory
+　　修改头文件
+　　#include <android/surface.h>
+　　#include <ui/Surface.h>
+　　#include <utils/Log.h>
+　　#include <SkBitmap.h>
+　　#include <SkCanvas.h>
+　　
+　　3.
+　　make: *** 没有规则可以创建“out/target/product/generic/obj/SHARED_LIBRARIES/libjnivideo_intermediates/LINKED/libjnivideo.so”需要的目标“out/target/product/generic/obj/lib/libsurfaceflinger_client.so”。 停止。
+　　当前目录下的Android.mk
+　　LOCAL_SHARED_LIBRARIES := /
+　　libskia /
+　　libui /
+　　libutils /
+　　liblog
+　　到这里如果幸运的话可以编译出so。
+　　
+　　其次是编译libffmpeg_jni.so
+　　需要修改的地方：
+　　1.
+　　jni/jni/Android.mk
+　　
+　　LOCAL_C_INCLUDES += /
+　　$(LOCAL_PATH)/../libffmpeg /
+　　$(LOCAL_PATH)/../libmediaplayer /
+　　$(LOCAL_PATH)/../include /
+　　$(LOCAL_PATH)/../include/android
+　　
+　　ifeq ($(IN_NDK),true)
+　　LOCAL_LDLIBS := -llog
+　　else
+　　LOCAL_PRELINK_MODULE := false
+　　LOCAL_LDLIBS := -llog
+　　LOCAL_SHARED_LIBRARIES := liblog
+　　endif
+　　
+　　
+　　2.
+　　Vector.h
+　　
+　　#include <new>
+　　#include <stdint.h>
+　　#include <sys/types.h>
+　　
+　　#include <cutils/log.h>
+　　#include <utils/VectorImpl.h>
+　　#include <utils/TypeHelpers.h>
+　　#include <android/Errors.h>
+　　3.
+　　<utils/TypeHelpers.h>
+　　
+　　4
+　　VectorImpl.h
+　　
+　　#include <assert.h>
+　　#include <stdint.h>
+　　#include <sys/types.h>
+　　#include <android/Errors.h>
+　　
+　　5.
+　　VectorImpl.cpp
+　　#include <string.h>
+　　#include <stdlib.h>
+　　#include <stdio.h>
+　　
+　　#include <cutils/log.h>
+　　#include <android/Errors.h>
+　　#include <utils/SharedBuffer.h>
+　　#include <utils/VectorImpl.h>
+　　同时也要把刚才两个编译出来的so放到obj/local/armeabi目录下，之后就可以了编译出libffmpeg_jni.so.
+　　最后也要把刚才两个so放到libs/armeabi目录下。要不然运行的时候找不到。
+　　播放的时候太卡了，声音也没有同步。
